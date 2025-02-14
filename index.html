@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>浪漫抽奖转盘</title>
+    <style>
+        body {
+            background: linear-gradient(135deg, #ffb6c1, #ff69b4);
+            font-family: 'Comic Sans MS', cursive;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            color: white;
+            overflow: hidden;
+        }
+
+        .container {
+            position: relative;
+            width: 350px;
+            height: 350px;
+            margin: 50px auto;
+        }
+
+        #wheel {
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            background: conic-gradient(
+                #FFB7D5 0deg 72deg,
+                #FF9EBD 72deg 144deg,
+                #FF85A5 144deg 216deg,
+                #FF6C8D 216deg 288deg,
+                #FF4B7F 288deg 360deg
+            );
+            position: relative;
+            box-shadow: 0 0 20px rgba(255, 105, 180, 0.5);
+        }
+
+        #pointer {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 0;
+            height: 0;
+            border-left: 20px solid transparent;
+            border-right: 20px solid transparent;
+            border-bottom: 80px solid #FF1493;
+            transform: translate(-50%, -100%);
+            z-index: 2;
+            filter: drop-shadow(0 0 5px #fff);
+            transform-origin: center center; /* 确保旋转中心为根部 */
+        }
+
+        .prize {
+            position: absolute;
+            width: 60px;
+            font-size: 18px;
+            color: white;
+            text-align: center;
+            transform-origin: 175px 175px;
+            text-shadow: 1px 1px 2px #ff1493;
+        }
+
+        button {
+            padding: 15px 30px;
+            font-size: 24px;
+            background: #FF69B4;
+            border: none;
+            border-radius: 30px;
+            color: white;
+            cursor: pointer;
+            transition: all 0.3s;
+            box-shadow: 0 5px 15px rgba(255, 105, 180, 0.4);
+        }
+
+        button:hover {
+            transform: scale(1.1);
+            background: #FF1493;
+            box-shadow: 0 8px 20px rgba(255, 20, 147, 0.6);
+        }
+
+        .prize-img {
+            margin-top: 20px;
+            max-width: 200px;
+            display: none;
+            border-radius: 15px;
+            box-shadow: 0 0 20px rgba(255, 105, 180, 0.5);
+        }
+
+        .overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            display: none;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .popup {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            color: #FF69B4;
+            text-align: center;
+            font-size: 20px;
+        }
+
+        .close-btn {
+            background: #FF69B4;
+            padding: 10px 20px;
+            border-radius: 30px;
+            border: none;
+            color: white;
+            cursor: pointer;
+            margin-top: 20px;
+        }
+
+        .close-btn:hover {
+            background: #FF1493;
+        }
+
+        .hearts {
+            position: fixed;
+            pointer-events: none;
+            width: 100%;
+            height: 100%;
+        }
+
+        @keyframes fall {
+            from { top: -10vh; opacity: 1; }
+            to { top: 110vh; opacity: 0; }
+        }
+    </style>
+</head>
+<body>
+    <div class="hearts">❤️❤️❤️</div>
+    <div class="container">
+        <div id="wheel">
+            <div class="prize" style="transform: rotate(36deg)">💝爱心告白</div>
+            <div class="prize" style="transform: rotate(108deg)">🎁秦巴游玩</div>
+            <div class="prize" style="transform: rotate(180deg)">🌸浪漫花束</div>
+            <div class="prize" style="transform: rotate(252deg)">🎀精致佳肴</div>
+            <div class="prize" style="transform: rotate(324deg)">🍭PS5游戏机</div>
+        </div>
+        <div id="pointer"></div>
+    </div>
+    <button id="spinBtn">戳我抽奖啦~✨</button>
+    <img id="prizeImage" class="prize-img" src="">
+
+    <div class="overlay" id="overlay">
+        <div class="popup">
+            <p id="popupMessage">恭喜你获得了某某奖品！</p>
+            <img id="popupImage" class="prize-img" src="">
+            <button class="close-btn" id="closeBtn">确定</button>
+        </div>
+    </div>
+
+    <script>
+        const prizes = ['爱心告白', '秦巴游玩', '浪漫花束', '精致佳肴', 'PS5游戏机'];
+        const prizeImages = ['prize1.jpg', 'prize2.jpg', 'prize3.jpg', 'prize4.jpg', 'prize5.jpg']; // 奖品图片路径
+        let pressTime = 0;
+        const btn = document.getElementById('spinBtn');
+        const pointer = document.getElementById('pointer');
+        const prizeImage = document.getElementById('prizeImage');
+        const overlay = document.getElementById('overlay');
+        const popupMessage = document.getElementById('popupMessage');
+        const popupImage = document.getElementById('popupImage');
+        const closeBtn = document.getElementById('closeBtn');
+
+        // 监听鼠标按下事件
+        btn.addEventListener('mousedown', () => pressTime = Date.now());
+        btn.addEventListener('touchstart', () => pressTime = Date.now());
+
+        // 点击事件，判断时间并旋转指针
+        btn.addEventListener('click', () => {
+            const duration = Date.now() - pressTime;
+            let resultIndex = 0;
+            
+            if (duration < 500) {
+                resultIndex = 0; // 确保短时间点击必定指向奖品1
+            } else {
+                resultIndex = Math.floor(Math.random() * 5); // 随机选取奖品1-5
+            }
+
+            // 使箭头旋转
+            const degrees = 1440 + (resultIndex * 72); // 4圈 + 目标角度
+            pointer.style.transition = 'transform 3s linear';
+            pointer.style.transform = `rotate(${degrees}deg)`;
+
+            // 3秒后停止并显示奖品
+            setTimeout(() => {
+                const prize = prizes[resultIndex];
+                popupMessage.innerText = `✨恭喜你获得了${prize}!✨`;
+                popupImage.src = prizeImages[resultIndex]; // 设置对应的奖品图片
+                prizeImage.style.display = 'block';
+                popupImage.style.display = 'block';
+                overlay.style.display = 'flex'; // 显示弹出框
+                
+                // 重置转盘
+                setTimeout(() => {
+                    pointer.style.transition = 'none';
+                    pointer.style.transform = 'rotate(0deg)';
+                    prizeImage.style.display = 'none';
+                    popupImage.style.display = 'none';
+                    overlay.style.display = 'none'; // 隐藏弹出框
+                }, 2000); // 延时后重置
+            }, 3000); // 3秒后显示结果
+        });
+
+        closeBtn.addEventListener('click', () => {
+            overlay.style.display = 'none'; // 关闭弹出框
+        });
+
+        // 添加飘落爱心效果
+        function createHearts() {
+            const heart = document.createElement('div');
+            heart.innerHTML = '❤️';
+            heart.style.position = 'fixed';
+            heart.style.left = Math.random() * 100 + 'vw';
+            heart.style.animation = `fall ${Math.random() * 3 + 2}s linear`;
+            document.body.appendChild(heart);
+            
+            setTimeout(() => heart.remove(), 5000);
+        }
+        setInterval(createHearts, 300);
+    </script>
+</body>
+</html>
